@@ -3,9 +3,10 @@ const int pin_ax = 3;
 const int pin_ay = 4;
 const int pin_az = 5;
 
-// 左右モータへの出力ピン
-const int pin_lmot = 8;
-const int pin_rmot = 9;
+// モータへの出力ピン（左右で共通）
+const int pin_mot_in1 = 8;
+const int pin_mot_in2 = 9;
+const int pin_motor = 10;
 
 /**
  * 現在の車体の傾きを取得する。
@@ -19,16 +20,20 @@ int get_angle(void);
 /**
  * モータへの出力を設定する。
  *
- *
- * output: モータへの電圧出力 [mV]
+ * output: モータへの電圧出力 [mV]，ただし -5000～5000 の範囲
  */
 void motor_output(int output);
 
 
 void setup()
 {
-  Serial.begin(9600);
+  pinMode(pin_motor,   OUTPUT);
+  pinMode(pin_mot_in1, OUTPUT);
+  pinMode(pin_mot_in1, OUTPUT);
+
+//  Serial.begin(9600);
 }
+
 
 void loop()
 {
@@ -53,47 +58,12 @@ void loop()
 }
 
 
-int get_angle_bak(void)
-{
-  // 今回使う加速度センサは電源電圧3.3Vの場合，
-  // 加速度0で1.65Vを出力するようになっている。
-  // Arduinoでは0～5Vを0～1023で取得するので，
-  // 1.65V÷5V×1023＝337.59 ―×10→ 3375 となる
-  static const int offset = 3375;
-
-  // センサから加速度を取得する。
-  int ax = analogRead(pin_ax) * 10 - offset;
-  int ay = analogRead(pin_ay) * 10 - offset;
-  int az = analogRead(pin_az) * 10 - offset;
-
-  // x軸とz軸の加速度から偏角を求める。
-  // 計算にはarctanの近似式を用いた：[http://blogs.yahoo.co.jp/fermiumbay2/38729661.html]より
-  int tmp = -(az*10)/ax;
-/* */
-  Serial.print(tmp);
-  Serial.print("   ");
-/* */
-/* */
-  Serial.print(ax);
-  Serial.print("   ");
-/* *
-  Serial.print(ay);
-  Serial.print("   ");
-/* */
-  Serial.print(az);
-  Serial.print("   ");
-/* */
-
-  return (12*tmp*tmp+4500)/(27*tmp*tmp+4500)*tmp*100; // [10^-3 rad]
-}
-
-
 int get_angle(void)
 {
   // 今回使う加速度センサは電源電圧3.3Vの場合，
   // 加速度0で1.65Vを出力するようになっている。
   // Arduinoでは0～5Vを0～1023で取得するので，
-  // 1.65V÷5V×1023＝337.59 ―×10→ 3375 となる
+  // 1.65V÷5V×1023＝337.59 となる
   static const float offset = 337.59;
 
   // センサから加速度を取得する。
@@ -104,33 +74,32 @@ int get_angle(void)
   // x軸とz軸の加速度から偏角を求める。
   // 計算にはarctanの近似式を用いた：[http://blogs.yahoo.co.jp/fermiumbay2/38729661.html]より
   float tmp = -az/ax;
-/* *
-  Serial.print(tmp);
-  Serial.print("   ");
-/* */
-/* *
-  Serial.print(ax);
-  Serial.print("   ");
-/* *
-  Serial.print(ay);
-  Serial.print("   ");
-/* *
-  Serial.print(az);
-  Serial.print("   ");
-/* */
   float ang = (12*tmp*tmp+45)/(27*tmp*tmp+45)*tmp;
-/* *
-  Serial.print(ang);
-  Serial.print("   ");
-/* */
 
+  // 1000倍してから整数として返す
   return (int)(ang*1000); // [10^-3 rad]
 }
 
 
 void motor_output(int output)
 {
-  analogWrite(pin_lmot, output);
-  analogWrite(pin_rmot, output);
+  // 出力値の絶対値をとる
+  int _out = constrain(abs(output), 0, 5000);
+
+  // 0～5000 の範囲で指定された電圧を 0～255 の範囲に縮小する。
+  // 5000 * 0.051 = 255
+  analogWrite(pin_motor, (int)((float)_out*0.051));
+
+  // 出力値の符号に応じてモータドライバの回転方向を決める
+  if (output >= 0)
+  {
+    digitalWrite(pin_mot_in1, HIGH);
+    digitalWrite(pin_mot_in2, LOW);
+  }
+  else
+  {
+    digitalWrite(pin_mot_in1, LOW);
+    digitalWrite(pin_mot_in2, HIGH);
+  }
 }
 
