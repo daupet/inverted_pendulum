@@ -31,7 +31,7 @@ void setup()
   pinMode(pin_mot_in1, OUTPUT);
   pinMode(pin_mot_in1, OUTPUT);
 
-//  Serial.begin(9600);
+  Serial.begin(9600);
 }
 
 
@@ -50,9 +50,9 @@ void loop()
   // 車体の傾きの偏差（目標値と現在値の差）を求め，それをゲイン倍してモータ出力を計算する
 
   Serial.print(angle);
-  Serial.print("\n");
+  Serial.print("   ");
 
-  output = 100;
+  output = angle*5;
   // モータにトルクを入力する
   motor_output(output);
 }
@@ -95,11 +95,15 @@ void motor_output(int output)
   {
     digitalWrite(pin_mot_in1, HIGH);
     digitalWrite(pin_mot_in2, LOW);
+    Serial.print((int)((float)_out*0.051));
   }
   else
   {
     digitalWrite(pin_mot_in1, LOW);
     digitalWrite(pin_mot_in2, HIGH);
+    Serial.print((int)((float)-_out*0.051));
   }
+
+  Serial.print("\n");
 }
 
